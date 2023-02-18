@@ -1,14 +1,14 @@
 import React from 'react'
 import { useState } from 'react'
-import { View, Text, TextInput, StyleSheet, Button } from 'react-native'
-import axios from 'axios'
+import { View, Text, TextInput, StyleSheet, Button, FlatList } from 'react-native'
 
 import DateTime from 'react-native-customize-selected-date'
 
-function NewDate(props) {
+function NewDate({ setRefresh, newDateVisible, refresh, setMassage }) {
   const [name, setName] = useState({ imie: '', nazwisko: '' })
   const [kal, setKal] = useState({ isVisible: false, set: false, date: 'Wybierz' })
   const [state, setState] = useState({ time: '' })
+
   let newItem = []
 
   const customWeekdays = ['N', 'Pn', 'Wt', 'Śr', 'Cz', 'Pi', 'So']
@@ -18,22 +18,31 @@ function NewDate(props) {
   }
   function zapisz() {
     if (name.imie !== '' && name.nazwisko !== '' && kal.date !== '') {
-      newItem.push({ imie: name.imie, nazwisko: name.nazwisko, data: kal.date, id: new Date(), last: '', dataLast: '' })
-      //
+      newItem.push({ imie: name.imie, nazwisko: name.nazwisko, data: kal.date, last: '', dataLast: '' })
+
       const url = 'https://biuro.adibau.pl/birthday/list'
+      // const url = 'http://192.168.1.123:8080/birthday/list'
 
       fetch(url, {
         method: 'post',
         body: JSON.stringify(newItem[0]),
         headers: { 'Content-Type': 'application/json' },
       })
-        .then((res) => res.json())
-        .then((data) => {
-          props.refresh.setRefresh(!props.refresh.refresh)
-          props.newDateVisible(false)
+        .then((res) => {
+          if (res.status === 200) {
+            setMassage('Zapis do bazy udany')
+            setRefresh(!refresh)
+            newDateVisible(false)
+            return res
+          } else {
+            return res.json()
+          }
+        })
+        .then((res) => {
+          res.massage && setMassage(`ERROR - ${res.massage}`)
         })
         .catch((err) => {
-          console.log(err)
+          setMassage(`ERROR - try again later`, err)
         })
     } else {
       alert('Prosze wypełnić wszystkie pola')
@@ -48,45 +57,51 @@ function NewDate(props) {
   }
 
   function anuluj() {
-    props.newDateVisible(false)
+    newDateVisible(false)
   }
 
   return (
     <>
-      <View style={styles.view}>
-        <Text style={styles.text}>Imie</Text>
-        <TextInput
-          placeholder='IMIE'
-          style={styles.textInput}
-          value={name.imie}
-          onChange={(text) => {
-            setName({ ...name, imie: text.nativeEvent.text })
-          }}
-        ></TextInput>
-      </View>
-      <View style={styles.view}>
-        <Text style={styles.text}>Nazwisko</Text>
-        <TextInput
-          placeholder='NAZWISKO'
-          style={styles.textInput}
-          value={name.nazwisko}
-          onChange={(text) => {
-            setName({ ...name, nazwisko: text.nativeEvent.text })
-          }}
-        ></TextInput>
-      </View>
-      <View style={styles.view}>
-        <Text style={styles.text}>Data urodzenia</Text>
-        {!kal.isVisible ? <Button color={'#6B7F82'} title={kal.date} onPress={kalendarzShow}></Button> : <Text></Text>}
-      </View>
-      <View>
-        {kal.isVisible && <DateTime date={state.time} changeDate={(date) => selectedDate(date)} format='YYYY-MM-DD' renderChildDay={(day) => renderChildDay(day)} customWeekdays={customWeekdays} />}
-        <View style={styles.buttons}>
-          <View>
-            <Button color={'#6B7F82'} title='Zapisz' onPress={zapisz}></Button>
-          </View>
-          <View>
-            <Button color={'red'} title='Anuluj' onPress={anuluj}></Button>
+      <View style={styles.container}>
+        <View style={styles.view}>
+          <Text style={styles.text}>Imie</Text>
+          <TextInput
+            placeholder='IMIE'
+            style={styles.textInput}
+            value={name.imie}
+            onChange={(text) => {
+              setName({ ...name, imie: text.nativeEvent.text })
+            }}
+          ></TextInput>
+        </View>
+        <View style={styles.view}>
+          <Text style={styles.text}>Nazwisko</Text>
+          <TextInput
+            placeholder='NAZWISKO'
+            style={styles.textInput}
+            value={name.nazwisko}
+            onChange={(text) => {
+              setName({ ...name, nazwisko: text.nativeEvent.text })
+            }}
+          ></TextInput>
+        </View>
+        <View style={styles.view}>
+          <Text style={styles.text}>Data urodzenia</Text>
+          {!kal.isVisible && <Button color={'#6B7F82'} title={kal.date} onPress={kalendarzShow}></Button>}
+        </View>
+        <View>
+          {kal.isVisible && (
+            <View style={styles.calendar}>
+              <DateTime date={state.time} changeDate={(date) => selectedDate(date)} format='YYYY-MM-DD' renderChildDay={(day) => renderChildDay(day)} customWeekdays={customWeekdays} />
+            </View>
+          )}
+          <View style={styles.buttons}>
+            <View>
+              <Button color={'#6B7F82'} title='Zapisz' onPress={zapisz}></Button>
+            </View>
+            <View>
+              <Button color={'red'} title='Anuluj' onPress={anuluj}></Button>
+            </View>
           </View>
         </View>
       </View>
@@ -95,6 +110,14 @@ function NewDate(props) {
 }
 
 const styles = StyleSheet.create({
+  calendar: {
+    flex: 1,
+  },
+  container: {
+    marginVertical: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   text: {
     display: 'flex',
     flex: 1,

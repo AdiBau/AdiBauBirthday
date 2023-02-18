@@ -1,97 +1,80 @@
-import { StatusBar } from 'expo-status-bar'
-import { FlatList, Modal, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, BackHandler, View } from 'react-native'
 
-import Header from './components/header'
-// import dataBase from './components/dataBase/dataBase'
 import { useState, useEffect } from 'react'
+import Login from './views/login'
+import Home from './views/home'
+import Register from './views/register'
+import { StatusBar } from 'expo-status-bar'
+import Spinner from 'react-native-loading-spinner-overlay'
+import Massage from './components/massage'
+import { NavigationContainer } from '@react-navigation/native'
 
 export default function App() {
-  const [refresh, setRefresh] = useState(false)
-  const [data, setData] = useState([])
-  let base = []
+  const [views, setViews] = useState({ login: 'true', home: '', register: '' })
+  const [spinner, setSpinner] = useState(false)
+  const [massage, setMassage] = useState('')
+
+  const backActionHandler = (e) => {
+    if (views.login) {
+      BackHandler.exitApp()
+    }
+    if (views.register) {
+      setViews((e) => ({ ...e, login: true, home: false }))
+    }
+    if (views.home) {
+      setViews((e) => ({ ...e, login: true, home: false }))
+    }
+    return true
+  }
+  useEffect(() => {
+    setTimeout(() => setMassage(''), 3000)
+  }, [massage])
+
+  useEffect(() => {
+    BackHandler.addEventListener('hardwareBackPress', backActionHandler)
+    return () => BackHandler.removeEventListener('hardwareBackPress', backActionHandler)
+  }, [views])
 
   useEffect(() => {
     const url = 'https://biuro.adibau.pl/birthday/list'
+    // const url = 'http://192.168.1.123:8080/birthday/list'
+
     fetch(url)
-      .then((response) => response.json())
       .then((res) => {
-        setData(res)
+        if (res.status === 200) {
+          setViews((e) => ({ ...e, login: false, home: true }))
+        } else {
+          setViews({ login: true })
+        }
       })
-      .catch((err) => console.log('error', err))
-  }, [refresh])
-
-  const pozostalo = (date) => {
-    const month = date[5] + date[6]
-    const day = date[8] + date[9]
-    let last = Math.floor((new Date(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()) - new Date(new Date().getFullYear(), Number(month), Number(day))) / 1000 / 60 / 60 / 24)
-    return last < 0 ? (last = Math.abs(last)) : 365 - last
-  }
-
-  const modifyList = () => {
-    data.map((e) => {
-      base.push({
-        nazwisko: e.nazwisko,
-        imie: e.imie,
-        data: e.data,
-        id: e.id,
-        last: pozostalo(e.data),
-        dataLast: new Date(),
-      })
-    })
-  }
-
-  modifyList()
-
-  function sortBaza() {
-    // let byDate = dataBase.slice(0);
-    return base.sort(function (a, b) {
-      let x = a.last
-      let y = b.last
-      return x < y ? -1 : x > y ? 1 : 0
-    })
-  }
+      .catch((err) => console.log('error z get lisat', err))
+  }, [])
 
   return (
-    <Modal animationType={'fade'}>
+    <>
       <View style={styles.container}>
-        <Header setRefresh={setRefresh} refresh={refresh} />
-        <View style={[styles.viewItem]}>
-          <Text style={[styles.textItem, styles.singleName]}>Name</Text>
-          <Text style={[styles.textItem, styles.singleDate]}>Birthday data</Text>
-          <Text style={[styles.textItem, styles.singleLeft]}>Left</Text>
-        </View>
-        <Text style={styles.line}></Text>
-        <FlatList
-          data={sortBaza()}
-          renderItem={(item) => (
-            <>
-              <View style={[styles.viewItem, pozostalo(item.item.data) < 10 ? { backgroundColor: 'rgba(0, 255, 0, 0.5)' } : '']}>
-                <Text style={styles.singleName}>
-                  {item.item.nazwisko} {item.item.imie}
-                </Text>
-                <Text style={styles.singleDate}>{item.item.data}</Text>
-                <Text style={styles.singleLeft}>{pozostalo(item.item.data)} </Text>
-              </View>
-              <Text style={styles.line}></Text>
-            </>
-          )}
-          keyExtractor={(item) => item.id}
-        ></FlatList>
+        <StatusBar style='auto' backgroundColor={styles.container.backgroundColor} />
+        {views.login && <Login view={views} setViews={setViews} setMassage={setMassage} />}
+        {views.register && <Register view={views} setViews={setViews} />}
+        {views.home && <Home setMassage={setMassage} setViews={setViews} />}
+        <Spinner visible={spinner} textContent={'Loading...'} textStyle={styles.spinnerTextStyle} />
+        {massage && <Massage msg={massage} />}
       </View>
-    </Modal>
+    </>
   )
 }
 
 const styles = StyleSheet.create({
+  spinnerTextStyle: {
+    color: '#FFF',
+  },
   container: {
-    // paddingTop: 35,
     backgroundColor: 'rgb(142, 184, 229)',
     height: '100%',
     width: '100%',
   },
   singleName: {
     width: '50%',
-    // alignSelf: 'center',
     textAlign: 'left',
   },
   singleDate: {
@@ -108,7 +91,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 3,
     marginHorizontal: 3,
-    // justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 5,
     backgroundColor: '#7C99B4',

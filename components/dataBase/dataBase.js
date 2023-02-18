@@ -1,140 +1,154 @@
-let dataBase = [
-    {
-    nazwisko: "Pytlik",
-    imie:'Adam',
-    data: '1982-01-14',
-    id: 1,
-        last:'',
-        dataLast:''
+const fs = require('fs');
+const path = require('path');
 
-},
-{
-        nazwisko: "Pytlik",
-        imie:'Agnieszka',
-        data: '1982-01-22',
-        id: 2,
-    last:'',
-    dataLast:''
-    },
-    {
-        nazwisko: "Pytlik",
-        imie:'Anna',
-        data: '2009-05-08',
-        id: 3,
-        last:'',
-        dataLast:''
-    },{
-        nazwisko: "Pytlik",
-        imie:'Agata',
-        data: '2007-05-29',
-        id: 4,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Pytlik",
-        imie:'Aneta',
-        data: '2013-10-19',
-        id: 5,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Pytlik",
-        imie:'Zuzuia',
-        data: '2008-01-24',
-        id: 6,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Siedlaczek",
-        imie:'Klaudia',
-        data: '1995-02-09',
-        id: 7,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Swierczek",
-        imie:'Saskia',
-        data: '2000-02-15',
-        id: 8,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Pytlik",
-        imie:'Artur',
-        data: '1977-02-18',
-        id: 9,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Głuchaczka",
-        imie:'Bożena',
-        data: '1984-02-24',
-        id: 10,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Swierczek",
-        imie:'Jacek',
-        data: '2000-03-06',
-        id: 11,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Swierczek",
-        imie:'Hania',
-        data: '2021-02-12',
-        id: 12,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Jęczmionka",
-        imie:'Danka',
-        data: '1983-04-01',
-        id: 13,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Jęczmionka",
-        imie:'Rafał',
-        data: '1980-01-19',
-        id: 14,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Jęczmionka",
-        imie:'Alicja',
-        data: '2011-04-17',
-        id: 15,
-        last:'',
-        dataLast:''
-    },
-    {
-        nazwisko: "Jęczmionka",
-        imie:'Emilia',
-        data: '2006-04-22',
-        id: 16,
-        last:'',
-        dataLast:''
-    },
+class DataBaseAdam {
+  constructor(dataBaseName) {
+    dataBaseName, (this.path = path.join(__dirname, 'dataBase', `${dataBaseName}.json`));
 
+    this.creat = async () => {
+      try {
+        await fs.mkdirSync(path.join(__dirname, 'dataBase'));
+      } catch (error) {}
+      await fs.writeFileSync(this.path, '[]', {
+        flag: 'w+',
+        encoding: 'utf-8',
+      });
+    };
 
+    this.createDB = async () => {
+      try {
+        const data = await fs.readFileSync(this.path, 'utf8');
+        if (!data || data === 'undefined') {
+          this.creat();
+        }
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          this.creat();
+        }
+      }
+      return this.path;
+    };
 
+    this.createDB();
+  }
+}
 
+class CreateColumn {
+  constructor(DataBase, columnName, Table_KEYS) {
+    this.path = DataBase.path;
+    this.columnName = columnName;
+    this.tab = Table_KEYS;
 
+    this.obj = {};
+    if (this.obj) {
+      for (let i = 0; i < this.tab.length; i++) {
+        this.obj[this.tab[i]] = '';
+      }
+    }
+    this.createColumn = async () => {
+      try {
+        const file = await fs.readFileSync(this.path, 'utf8');
+        const data = JSON.parse(file);
 
+        const el = data.find((el) => el.columnName === this.columnName);
 
+        if (!el) {
+          const column = {
+            columnName,
+            decleret_items: [this.obj],
+            items: [],
+          };
+          data.push(column);
+          try {
+            fs.writeFileSync(this.path, JSON.stringify(data), {
+              flag: 'w',
+            });
+          } catch (error) {}
+        }
+        return this.columnName;
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          setTimeout(() => {
+            this.createColumn(), 1000;
+          });
+        } else {
+          console.log(error);
+        }
+      }
+    };
+    this.createColumn();
+  }
 
-]
+  addItems = async (value) => {
+    let newObj = {};
 
-export default dataBase
+    if (typeof value === 'object') {
+      const valKeys = Object.keys(value);
+      const objKeys = Object.keys(this.obj);
+      valKeys.map(async (el) => {
+        objKeys.map((e) => {
+          if (e === el) {
+            newObj[e] = value[el];
+          }
+        });
+      });
+      try {
+        const file = await fs.readFileSync(this.path, 'utf8');
+        let items = await JSON.parse(file);
+        const index = await items.findIndex((e) => e.columnName === this.columnName);
+
+        if (typeof index === 'number') {
+          newObj.id = new Date().valueOf();
+          await items[index].items.push(newObj);
+          await fs.writeFileSync(this.path, JSON.stringify(items), 'utf8');
+         
+        }      } catch (error) {
+        console.log('Bład zapisu nowego wiersza ');
+      }
+    }
+  };
+
+  showAll = async () => {
+    try {
+      const data = await fs.readFileSync(this.path, 'utf8');
+      const dataJson = await JSON.parse(data);
+      return dataJson;
+    } catch (e) {
+      console.log(`Column :${this.columnName} NOT EXIST`);
+    }
+  };
+
+  findOneById = async (id) => {
+    try {
+      const data = await fs.readFileSync(this.path, 'utf8');
+      if (!data) throw new Error('Can`t read dataBase');
+
+      const dataJson = await JSON.parse(data);
+      const index = await dataJson.findIndex((e) => e.columnName === this.columnName);
+      console.log(index);
+
+      const one = await dataJson[index].items.find((e) => e.id === id);
+      console.log(one);
+
+      return one ? one : [];
+    } catch (error) {
+      console.log({ Message: `Column :${this.columnName} NOT EXIST`, Error: error });
+    }
+  };
+
+  findManyByName = async (name, value) => {
+    try {
+      const data = await fs.readFileSync(this.path, 'utf8');
+      if (!data) throw new Error('Can`t read dataBase');
+      const dataJson = await JSON.parse(data);
+
+      const many = await dataJson.map((e) => e.columnName === this.columnName);
+
+      return many ? many : [];
+    } catch (error) {
+      console.log({ Message: `Column :${this.columnName} NOT EXIST`, Error: error });
+    }
+  };
+}
+
+module.exports = { DataBaseAdam, CreateColumn };
